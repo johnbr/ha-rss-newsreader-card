@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "RSS Newsreader",
+        "description": "Set up the RSS Newsreader backend and dashboard card. Feeds are configured on each card, not here."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Already configured. Only a single instance is needed."
+    }
+  }
+}

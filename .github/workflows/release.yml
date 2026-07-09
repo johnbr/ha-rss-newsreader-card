@@ -1,0 +1,28 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify tag matches manifest and package versions
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          MANIFEST=$(jq -r .version custom_components/rss_newsreader/manifest.json)
+          PACKAGE=$(jq -r .version package.json)
+          if [ "$TAG" != "$MANIFEST" ] || [ "$TAG" != "$PACKAGE" ]; then
+            echo "Version mismatch: tag=$TAG manifest=$MANIFEST package.json=$PACKAGE"
+            exit 1
+          fi
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
