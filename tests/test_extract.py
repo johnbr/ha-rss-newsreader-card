@@ -57,3 +57,44 @@ def test_excerpt():
 def test_unreadable_page_raises():
     with pytest.raises(ArticleExtractError):
         extract_article("<html><body></body></html>", "https://x/1")
+
+
+PROMO_PAGE = """<!doctype html>
+<html><head><title>Story</title></head>
+<body>
+  <article>
+    <p>{p1}</p>
+    <aside data-spacefinder-type="model.dotcomrendering.pageElements.NewsletterSignupBlockElement">
+      <a href="#EmailSignup-skip-link-12">skip past newsletter promotion</a>
+      <h2>Sign up to Well Actually</h2>
+      <p>Practical advice on living well, every week</p>
+      <img src="https://cdn.example/promo.jpg">
+      <div id="EmailSignup-skip-link-12" aria-hidden="true">after newsletter promotion</div>
+    </aside>
+    <p>{p2}</p>
+    <div class="article-newsletter-signup"><p>Subscribe to our daily briefing!</p></div>
+    <form action="/subscribe"><input type="email"><button>Sign up</button></form>
+    <p>{p3}</p>
+  </article>
+</body></html>
+""".format(
+    p1="The story opens with a long paragraph about the weather and moods. " * 5,
+    p2="It continues with expert commentary and research findings on heat. " * 5,
+    p3="It concludes with practical suggestions for staying cool and calm. " * 5,
+)
+
+
+def test_newsletter_promos_removed():
+    result = extract_article(PROMO_PAGE, "https://news.example/story/2")
+    content = result["content_html"]
+    assert "story opens" in content
+    assert "expert commentary" in content
+    assert "practical suggestions" in content
+    for junk in (
+        "skip past newsletter promotion",
+        "Sign up to Well Actually",
+        "after newsletter promotion",
+        "Subscribe to our daily briefing",
+        "promo.jpg",
+    ):
+        assert junk not in content
