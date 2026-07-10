@@ -65,8 +65,13 @@ async def async_unregister_frontend(hass: HomeAssistant) -> None:
 
 
 def _storage_resources(hass: HomeAssistant):
-    """Return the resource storage collection, or None in YAML mode."""
+    """Return the resource storage collection, or None in YAML resource mode."""
     lovelace = hass.data.get("lovelace")
-    if getattr(lovelace, "mode", None) != "storage":
+    # HA 2026.7 renamed LovelaceData.mode to resource_mode; check both so
+    # older cores (>= 2025.7) keep working
+    mode = getattr(lovelace, "resource_mode", None) or getattr(
+        lovelace, "mode", None
+    )
+    if mode != "storage":
         return None
     return getattr(lovelace, "resources", None)
