@@ -20,6 +20,11 @@ jobs:
       - uses: hacs/action@main
         with:
           category: integration
+          # `brands`: dropped once the home-assistant/brands PR lands. No new
+          # repository can pass this one -- the check reads an upstream
+          # repository this project has no entry in yet.
+          # `images`: dropped once a real screenshot is added to README.
+          ignore: brands images
 
   frontend:
     runs-on: ubuntu-latest
