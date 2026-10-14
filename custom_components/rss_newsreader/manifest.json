@@ -1,15 +1,29 @@
 {
   "domain": "rss_newsreader",
   "name": "RSS Newsreader",
-  "codeowners": ["@johnbr"],
+  "codeowners": [
+    "@johnbr"
+  ],
   "config_flow": true,
-  "dependencies": ["http", "websocket_api", "lovelace", "frontend"],
+  "dependencies": [
+    "http",
+    "websocket_api",
+    "lovelace",
+    "frontend"
+  ],
   "documentation": "https://github.com/johnbr/ha-rss-newsreader-card",
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/johnbr/ha-rss-newsreader-card/issues",
-  "loggers": ["feedparser", "readability"],
-  "requirements": ["feedparser>=6.0.12", "nh3==0.3.6", "readability-lxml==0.8.4.1"],
+  "loggers": [
+    "feedparser",
+    "readability"
+  ],
+  "requirements": [
+    "feedparser>=6.0.12",
+    "nh3==0.3.6",
+    "readability-lxml==0.8.4.1"
+  ],
   "single_config_entry": true,
-  "version": "0.1.0"
+  "version": "0.1.1"
 }
