@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 import lxml.html
 
 from .const import MAX_CONTENT_HTML_BYTES
-from .sanitize import sanitize_html, strip_html
+from .sanitize import http_url, sanitize_html, strip_html
 
 
 class FeedParseError(Exception):
@@ -35,7 +35,7 @@ def parse_feed(body: bytes, feed_url: str, max_items: int) -> dict[str, Any]:
         raise FeedParseError(str(exc) if exc else "unparseable feed")
 
     feed = parsed.get("feed", {})
-    feed_link = feed.get("link") or feed_url
+    feed_link = http_url(feed.get("link"), feed_url) or feed_url
     entries = [
         _normalize_entry(entry, feed_link)
         for entry in parsed.get("entries", [])[:max_items]
@@ -51,7 +51,7 @@ def parse_feed(body: bytes, feed_url: str, max_items: int) -> dict[str, Any]:
 
 
 def _normalize_entry(entry: dict[str, Any], feed_link: str) -> dict[str, Any]:
-    link = entry.get("link") or None
+    link = http_url(entry.get("link"), feed_link)
     base = link or feed_link
     title = strip_html(entry.get("title")) or "(untitled)"
     published = _published_iso(entry)
@@ -136,8 +136,8 @@ def _entry_image(
         entry.get("media_thumbnail") or []
     )
     for item in media:
-        url = item.get("url")
-        if not url or not url.startswith(("http://", "https://")):
+        url = http_url(item.get("url"))
+        if not url:
             continue
         mime = item.get("type") or ""
         medium = item.get("medium") or ""
@@ -159,7 +159,7 @@ def _entry_image(
 
     # 2. image enclosure
     for enclosure in entry.get("enclosures") or []:
-        href = enclosure.get("href") or enclosure.get("url")
+        href = http_url(enclosure.get("href") or enclosure.get("url"))
         if href and (enclosure.get("type") or "").startswith("image/"):
             return href
 
@@ -174,8 +174,8 @@ def _entry_image(
 
 def _feed_icon(feed: dict[str, Any], feed_link: str) -> str | None:
     image = feed.get("image") or {}
-    href = image.get("href")
-    if href and href.startswith(("http://", "https://")):
+    href = http_url(image.get("href"))
+    if href:
         return href
     parsed = urlparse(feed_link)
     if parsed.scheme in ("http", "https") and parsed.netloc:

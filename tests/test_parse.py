@@ -156,3 +156,24 @@ def test_atom_full_content():
     assert entry["published"] == "2026-07-01T08:30:00+00:00"
     assert entry["content_html"] == "<p>Full article body</p>"
     assert entry["has_full_content"] is True
+
+
+HOSTILE_FEED = b"""<?xml version="1.0"?><rss version="2.0"><channel><title>t</title>
+<link>javascript:alert(1)</link>
+<item><title>Script link</title><link>javascript:alert(document.domain)</link>
+<enclosure url="javascript:alert(2)" type="image/png"/></item>
+<item><title>Data link</title><link>data:text/html,&lt;script&gt;alert(3)&lt;/script&gt;</link></item>
+<item><title>Relative</title><link>/2026/10/story</link></item>
+</channel></rss>"""
+
+
+def test_feed_urls_other_than_http_never_reach_the_card():
+    """The card binds `link` into <a href>; javascript: there runs in HA's origin."""
+    result = parse_feed(HOSTILE_FEED, "https://feeds.example/rss", 10)
+    assert result["feed_link"] == "https://feeds.example/rss"
+    by_title = {entry["title"]: entry for entry in result["entries"]}
+    assert by_title["Script link"]["link"] is None
+    assert by_title["Script link"]["image_url"] is None
+    assert by_title["Data link"]["link"] is None
+    assert by_title["Relative"]["link"] == "https://feeds.example/2026/10/story"
+

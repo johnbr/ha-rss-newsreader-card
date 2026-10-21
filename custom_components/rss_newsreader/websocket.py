@@ -21,6 +21,7 @@ from .const import (
     MAX_ITEMS_PER_FEED,
 )
 from .feed_manager import FeedHTTPError, FetchTooLargeError
+from .netguard import BlockedDestinationError
 
 WS_FETCH_FEEDS = f"{DOMAIN}/fetch_feeds"
 WS_FETCH_ARTICLE = f"{DOMAIN}/fetch_article"
@@ -90,6 +91,8 @@ async def ws_fetch_article(
         result = await extractor.fetch_article(url)
     except FetchTooLargeError:
         connection.send_error(msg["id"], "too_large", "Article page exceeds size limit")
+    except BlockedDestinationError:
+        connection.send_error(msg["id"], "not_allowed", "Article is not on a public address")
     except (ClientError, TimeoutError, FeedHTTPError) as err:
         connection.send_error(
             msg["id"], "fetch_failed", f"Could not fetch article: {err}"

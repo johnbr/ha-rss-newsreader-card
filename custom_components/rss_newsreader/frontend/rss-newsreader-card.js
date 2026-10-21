@@ -150,7 +150,7 @@ function t(t,e,i,s){var r,o=arguments.length,n=o<3?e:null===s?s=Object.getOwnPro
         border-radius: 8px;
         background: var(--secondary-background-color);
       }
-    `]}}t([dt({attribute:!1})],gt.prototype,"item",void 0),t([dt({type:Boolean})],gt.prototype,"showImage",void 0),t([dt({type:Number})],gt.prototype,"now",void 0),t([dt()],gt.prototype,"language",void 0),t([pt()],gt.prototype,"_iconFailed",void 0),_t("rss-newsreader-headline",gt);const vt=2;class yt{constructor(t){}get _$AU(){return this._$AM._$AU}_$AT(t,e,i){this._$Ct=t,this._$AM=e,this._$Ci=i}_$AS(t,e){return this.update(t,e)}update(t,e){return this.render(...e)}}class $t extends yt{constructor(t){if(super(t),this.it=V,t.type!==vt)throw Error(this.constructor.directiveName+"() can only be used in child bindings")}render(t){if(t===V||null==t)return this._t=void 0,this.it=t;if(t===q)return t;if("string"!=typeof t)throw Error(this.constructor.directiveName+"() called with a non-string value");if(t===this.it)return this._t;this.it=t;const e=[t];return e.raw=e,this._t={_$litType$:this.constructor.resultType,strings:e,values:[]}}}$t.directiveName="unsafeHTML",$t.resultType=1;const bt=(t=>(...e)=>({_$litDirective$:t,values:e}))($t);class wt extends at{constructor(){super(...arguments),this.article=null,this.articleLoading=!1,this.articleError=null,this.showImages=!0,this.openLinks="new_tab",this.language="en"}render(){const{entry:t,feed:e,feedConfig:i}=this.item,s=i.name||e.feed_title||ft(e.url),r=this.article?.title||t.title,o=this.article?.content_html||t.content_html||t.summary_html||"",n=this.article?.image_url||t.image_url,a=this.showImages&&n&&!o.includes("<img");return B`
+    `]}}t([dt({attribute:!1})],gt.prototype,"item",void 0),t([dt({type:Boolean})],gt.prototype,"showImage",void 0),t([dt({type:Number})],gt.prototype,"now",void 0),t([dt()],gt.prototype,"language",void 0),t([pt()],gt.prototype,"_iconFailed",void 0),_t("rss-newsreader-headline",gt);const vt=2;class yt{constructor(t){}get _$AU(){return this._$AM._$AU}_$AT(t,e,i){this._$Ct=t,this._$AM=e,this._$Ci=i}_$AS(t,e){return this.update(t,e)}update(t,e){return this.render(...e)}}class $t extends yt{constructor(t){if(super(t),this.it=V,t.type!==vt)throw Error(this.constructor.directiveName+"() can only be used in child bindings")}render(t){if(t===V||null==t)return this._t=void 0,this.it=t;if(t===q)return t;if("string"!=typeof t)throw Error(this.constructor.directiveName+"() called with a non-string value");if(t===this.it)return this._t;this.it=t;const e=[t];return e.raw=e,this._t={_$litType$:this.constructor.resultType,strings:e,values:[]}}}$t.directiveName="unsafeHTML",$t.resultType=1;const bt=(t=>(...e)=>({_$litDirective$:t,values:e}))($t);class wt extends at{constructor(){super(...arguments),this.article=null,this.articleLoading=!1,this.articleError=null,this.showImages=!0,this.openLinks="new_tab",this.language="en"}render(){const{entry:t,feed:e,feedConfig:i}=this.item,s=i.name||e.feed_title||ft(e.url),r=this.article?.title||t.title,o=this.article?.content_html||t.content_html||t.summary_html||"",n=this.article?.image_url||t.image_url,a=function(t){if(!t)return null;try{const e=new URL(t);return"http:"===e.protocol||"https:"===e.protocol?e.href:null}catch{return null}}(t.link),l=this.showImages&&n&&!o.includes("<img");return B`
       <div class="toolbar">
         <button
           class="icon-btn"
@@ -160,9 +160,9 @@ function t(t,e,i,s){var r,o=arguments.length,n=o<3?e:null===s?s=Object.getOwnPro
           <ha-icon icon="mdi:arrow-left"></ha-icon>
         </button>
         <span class="toolbar-source">${s}</span>
-        ${t.link?B`<a
+        ${a?B`<a
               class="icon-btn ext"
-              href=${t.link}
+              href=${a}
               target=${"same_tab"===this.openLinks?"_self":"_blank"}
               rel="noopener noreferrer"
               aria-label="Open article on site"
@@ -176,7 +176,7 @@ function t(t,e,i,s){var r,o=arguments.length,n=o<3?e:null===s?s=Object.getOwnPro
           ${t.author?B`<span>${t.author}</span><span>·</span>`:V}
           <span>${function(t,e="en"){if(!t)return"";const i=Date.parse(t);if(Number.isNaN(i))return"";try{return new Intl.DateTimeFormat(e,{dateStyle:"medium",timeStyle:"short"}).format(i)}catch{return new Date(i).toLocaleString()}}(t.published,this.language)}</span>
         </div>
-        ${a?B`<img
+        ${l?B`<img
               class="hero"
               src=${n}
               alt=""
@@ -200,12 +200,12 @@ function t(t,e,i,s){var r,o=arguments.length,n=o<3?e:null===s?s=Object.getOwnPro
             </div>`:this.articleLoading?V:B`<div class="loading-note">
                 This feed doesn't include article text.
               </div>`}
-        ${t.link?B`<a
+        ${a?B`<a
               class="read-more"
-              href=${t.link}
+              href=${a}
               target=${"same_tab"===this.openLinks?"_self":"_blank"}
               rel="noopener noreferrer"
-              >Read on ${ft(t.link)}</a
+              >Read on ${ft(a)}</a
             >`:V}
       </div>
     `}_back(){this.dispatchEvent(new CustomEvent("back",{bubbles:!0,composed:!0}))}_hideImage(t){t.target.style.display="none"}_contentClick(t){if("same_tab"!==this.openLinks)return;const e=t.composedPath().find(t=>"A"===t.tagName);e?.href&&(t.preventDefault(),window.location.href=e.href)}static{this.styles=[mt,n`

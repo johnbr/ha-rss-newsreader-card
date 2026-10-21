@@ -1,4 +1,5 @@
-from rss_newsreader_pure.sanitize import sanitize_html, strip_html
+import pytest
+from rss_newsreader_pure.sanitize import http_url, sanitize_html, strip_html
 
 
 def test_script_stripped():
@@ -62,3 +63,33 @@ def test_empty_input():
 def test_strip_html():
     assert strip_html("<b>Bold</b> &amp; <i>plain</i>") == "Bold & plain"
     assert strip_html(None) == ""
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "javascript:alert(1)",
+        " JavaScript:alert(1)",
+        "java\tscript:alert(1)",
+        "data:text/html,<script>alert(1)</script>",
+        "vbscript:msgbox",
+        "//no-scheme.example/a",
+        "mailto:a@example.com",
+        "",
+        None,
+        42,
+    ],
+)
+def test_http_url_refuses_everything_but_http(value) -> None:
+    assert http_url(value) is None
+
+
+def test_http_url_keeps_http_and_https() -> None:
+    assert http_url("https://example.com/a?b=c") == "https://example.com/a?b=c"
+    assert http_url("  http://example.com/  ") == "http://example.com/"
+
+
+def test_http_url_resolves_relative_links_against_the_feed() -> None:
+    assert http_url("/2026/10/story", "https://news.example/feed.xml") == "https://news.example/2026/10/story"
+    assert http_url("javascript:alert(1)", "https://news.example/feed.xml") is None
+

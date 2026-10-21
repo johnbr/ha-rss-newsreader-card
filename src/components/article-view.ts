@@ -2,7 +2,7 @@ import { LitElement, html, css, nothing } from "lit";
 import { property } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 
-import { absoluteTime, hostname } from "../format";
+import { absoluteTime, hostname, safeHttpUrl } from "../format";
 import { sharedStyles } from "../styles";
 import {
   defineOnce,
@@ -36,6 +36,7 @@ export class RssNewsreaderArticle extends LitElement {
       entry.summary_html ||
       "";
     const heroUrl = this.article?.image_url || entry.image_url;
+    const link = safeHttpUrl(entry.link);
     const showHero =
       this.showImages && heroUrl && !bodyHtml.includes("<img");
 
@@ -49,10 +50,10 @@ export class RssNewsreaderArticle extends LitElement {
           <ha-icon icon="mdi:arrow-left"></ha-icon>
         </button>
         <span class="toolbar-source">${source}</span>
-        ${entry.link
+        ${link
           ? html`<a
               class="icon-btn ext"
-              href=${entry.link}
+              href=${link}
               target=${this.openLinks === "same_tab" ? "_self" : "_blank"}
               rel="noopener noreferrer"
               aria-label="Open article on site"
@@ -101,13 +102,13 @@ export class RssNewsreaderArticle extends LitElement {
             : html`<div class="loading-note">
                 This feed doesn't include article text.
               </div>`}
-        ${entry.link
+        ${link
           ? html`<a
               class="read-more"
-              href=${entry.link}
+              href=${link}
               target=${this.openLinks === "same_tab" ? "_self" : "_blank"}
               rel="noopener noreferrer"
-              >Read on ${hostname(entry.link)}</a
+              >Read on ${hostname(link)}</a
             >`
           : nothing}
       </div>
