@@ -5,17 +5,18 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Any
 
-from aiohttp import ClientError, ClientResponse, ClientTimeout
+from aiohttp import ClientError, ClientResponse, ClientSession, ClientTimeout
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import dt as dt_util
 
 from . import parse
 from .const import (
     FEED_CACHE_FLOOR,
+    FEED_CACHE_MAX_ENTRIES,
     FEED_CACHE_TTL,
     FEED_FETCH_TIMEOUT,
     FEED_MAX_BYTES,
@@ -24,6 +25,7 @@ from .const import (
     RECENT_LINKS_TTL,
     USER_AGENT,
 )
+from .netguard import BlockedDestinationError, guarded_get
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,9 +66,12 @@ class FeedCacheEntry:
 class FeedManager:
     """Fetches, caches and normalizes feeds for all cards on the instance."""
 
-    def __init__(self, hass: HomeAssistant, version: str) -> None:
+    def __init__(self, hass: HomeAssistant, session: ClientSession, version: str) -> None:
         self._hass = hass
-        self._cache: dict[str, FeedCacheEntry] = {}
+        # The integration's own guarded session (see netguard), never the
+        # shared one: feed URLs come from any logged-in user.
+        self._session = session
+        self._cache: OrderedDict[str, FeedCacheEntry] = OrderedDict()
         self._recent_links: dict[str, float] = {}
         self.user_agent = USER_AGENT.format(version=version)
 
@@ -98,7 +103,7 @@ class FeedManager:
     async def _get_feed(
         self, url: str, force_refresh: bool, max_items: int
     ) -> dict[str, Any]:
-        entry = self._cache.setdefault(url, FeedCacheEntry())
+        entry = self._cache_entry(url)
         min_age = FEED_CACHE_FLOOR if force_refresh else FEED_CACHE_TTL
         if self._is_fresh(entry, min_age):
             return self._served(entry, max_items)
@@ -109,6 +114,8 @@ class FeedManager:
                 return self._served(entry, max_items)
             try:
                 return await self._refresh(url, entry, max_items)
+            except BlockedDestinationError as err:
+                return self._stale_or_error(url, entry, max_items, "blocked", str(err))
             except (ClientError, TimeoutError) as err:
                 return self._stale_or_error(
                     url, entry, max_items, "fetch_failed", str(err) or type(err).__name__
@@ -127,7 +134,6 @@ class FeedManager:
     async def _refresh(
         self, url: str, entry: FeedCacheEntry, max_items: int
     ) -> dict[str, Any]:
-        session = async_get_clientsession(self._hass)
         headers = {"User-Agent": self.user_agent}
         if entry.etag:
             headers["If-None-Match"] = entry.etag
@@ -135,9 +141,10 @@ class FeedManager:
             headers["If-Modified-Since"] = entry.last_modified
 
         _LOGGER.debug("Fetching feed %s", url)
-        async with session.get(
-            url, headers=headers, timeout=ClientTimeout(total=FEED_FETCH_TIMEOUT)
-        ) as response:
+        response = await guarded_get(
+            self._session, url, headers=headers, timeout=ClientTimeout(total=FEED_FETCH_TIMEOUT)
+        )
+        async with response:
             if response.status == 304 and entry.result is not None:
                 _LOGGER.debug("Feed %s not modified (304)", url)
                 entry.fetched_at = time.monotonic()
@@ -158,6 +165,18 @@ class FeedManager:
         entry.last_modified = last_modified
         self._remember_links(result)
         return self._served(entry, max_items)
+
+    def _cache_entry(self, url: str) -> FeedCacheEntry:
+        """The cache slot for a URL, most recently used last, bounded."""
+        entry = self._cache.get(url)
+        if entry is None:
+            entry = self._cache[url] = FeedCacheEntry()
+        self._cache.move_to_end(url)
+        while len(self._cache) > FEED_CACHE_MAX_ENTRIES:
+            # A fetch still holding an evicted entry keeps its own reference
+            # and finishes normally; only the cached result is forgotten.
+            self._cache.popitem(last=False)
+        return entry
 
     @staticmethod
     def _is_fresh(entry: FeedCacheEntry, min_age: float) -> bool:

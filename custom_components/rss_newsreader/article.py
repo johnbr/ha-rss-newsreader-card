@@ -7,9 +7,8 @@ from collections import OrderedDict
 from typing import Any
 from urllib.parse import urlparse
 
-from aiohttp import ClientTimeout
+from aiohttp import ClientSession, ClientTimeout
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from . import extract
 from .const import (
@@ -19,13 +18,15 @@ from .const import (
     ARTICLE_MAX_BYTES,
 )
 from .feed_manager import FeedHTTPError, read_capped
+from .netguard import guarded_get
 
 
 class ArticleExtractor:
     """Fetches article pages and extracts reader-view content."""
 
-    def __init__(self, hass: HomeAssistant, user_agent: str) -> None:
+    def __init__(self, hass: HomeAssistant, session: ClientSession, user_agent: str) -> None:
         self._hass = hass
+        self._session = session
         self._user_agent = user_agent
         self._cache: OrderedDict[str, tuple[dict[str, Any], float]] = OrderedDict()
 
@@ -38,12 +39,13 @@ class ArticleExtractor:
         if urlparse(url).scheme not in ("http", "https"):
             raise extract.ArticleExtractError("only http(s) URLs are supported")
 
-        session = async_get_clientsession(self._hass)
-        async with session.get(
+        response = await guarded_get(
+            self._session,
             url,
             headers={"User-Agent": self._user_agent},
             timeout=ClientTimeout(total=ARTICLE_FETCH_TIMEOUT),
-        ) as response:
+        )
+        async with response:
             if response.status >= 400:
                 raise FeedHTTPError(response.status)
             body = await read_capped(response, ARTICLE_MAX_BYTES)

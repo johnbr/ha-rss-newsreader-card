@@ -19,7 +19,9 @@ linked page, reader-view style.
 - Optional per-feed **full-article extraction** (readability) for feeds that
   only ship teasers
 - All feed HTML is sanitized server-side (nh3/ammonia) before it ever reaches
-  the browser
+  the browser, and every link and image URL is held to http(s)
+- Fetches only public addresses, so the card can't be used to reach into your
+  local network (see [Security](#security))
 - Shared TTL cache with ETag/Last-Modified revalidation — many cards, one
   upstream fetch
 - Visual card editor; light/dark theme aware
@@ -29,12 +31,17 @@ linked page, reader-view style.
 
 ### HACS (recommended)
 
-1. HACS → three-dot menu → *Custom repositories* → add this repo, category
-   **Integration**.
-2. Install **RSS Newsreader Card**, restart Home Assistant.
-3. Settings → Devices & Services → *Add Integration* → **RSS Newsreader**.
-4. Add the card to a dashboard (it appears in the card picker as
+[![Open this repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=johnbr&repository=ha-rss-newsreader-card&category=integration)
+
+1. In HACS, search for **RSS Newsreader Card**, download it (or use the button
+   above), and restart Home Assistant.
+2. Settings → Devices & Services → *Add Integration* → **RSS Newsreader**.
+3. Add the card to a dashboard (it appears in the card picker as
    *RSS Newsreader Card*).
+
+If HACS doesn't list it yet, add it as a custom repository instead: HACS →
+**⋮** → **Custom repositories** → `https://github.com/johnbr/ha-rss-newsreader-card`,
+category **Integration**, then continue from step 1.
 
 ### Manual
 
@@ -48,9 +55,12 @@ directory, restart, then add the integration as above.
 > ```yaml
 > lovelace:
 >   resources:
->     - url: /rss_newsreader/rss-newsreader-card.js?v=0.1.0
+>     - url: /rss_newsreader/rss-newsreader-card.js?v=0.1.1
 >       type: module
 > ```
+>
+> Use the installed version for `?v=` and change it on every update, or browsers
+> keep the old card. The integration logs the exact URL at startup.
 
 ## Card configuration
 
@@ -88,8 +98,8 @@ height: 420                  # px; omit to let the layout decide
 - With `full_content: true` on a feed, opening a headline asks the backend to
   fetch the linked page and extract readable text + images (readability). The
   feed summary is shown instantly and replaced when extraction finishes. This
-  works only for links the backend itself recently served (SSRF guard), and
-  won't work on paywalled or JavaScript-rendered sites.
+  works only for links the backend itself recently served, and won't work on
+  paywalled or JavaScript-rendered sites.
 
 ### Notes
 
@@ -98,6 +108,23 @@ height: 420                  # px; omit to let the layout decide
   automatically.
 - One dead feed never breaks the card — you'll see a small warning chip and
   the rest of the headlines.
+
+## Security
+
+Any logged-in Home Assistant user can ask the backend for a feed, not only
+admins, since that is what lets the card work for everyone in the house. So the
+backend refuses to fetch anything that isn't on a **public** address: loopback,
+private (RFC 1918) and link-local ranges, cloud metadata addresses, and their
+IPv6 equivalents. That holds for feeds, for article pages, for every redirect
+hop, and for hostnames that resolve to such an address, which is checked when
+the connection is made, so DNS tricks can't get around it.
+
+The consequence: **a feed served from your own network can't be shown.** Use the
+feed's public URL if it has one.
+
+Feed links and image URLs are accepted only as http(s); anything else, such as a
+`javascript:` link in a hostile feed, is dropped before it reaches the card, and
+the card checks again before rendering a link.
 
 ## Development
 
@@ -108,7 +135,7 @@ npm run watch        # rebuild on change
 npm run typecheck
 
 python3 -m venv .venv
-.venv/bin/pip install feedparser==6.0.12 nh3==0.3.6 readability-lxml==0.8.4.1 pytest
+.venv/bin/pip install feedparser==6.0.12 nh3==0.3.6 readability-lxml==0.8.4.1 aiohttp pytest
 .venv/bin/python -m pytest tests/
 ```
 

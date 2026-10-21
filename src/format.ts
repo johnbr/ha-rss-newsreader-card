@@ -53,6 +53,26 @@ export function absoluteTime(iso: string | null, language = "en"): string {
   }
 }
 
+/**
+ * The URL, if it is http(s); otherwise null.
+ *
+ * Feed links come from whoever publishes the feed, and Lit does not sanitize
+ * URLs it binds into `href`: a `javascript:` link would run in Home
+ * Assistant's origin when clicked. The backend already drops anything that is
+ * not http(s); this keeps the card safe on its own.
+ */
+export function safeHttpUrl(url: string | null | undefined): string | null {
+  if (!url) {
+    return null;
+  }
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.href : null;
+  } catch {
+    return null;
+  }
+}
+
 export function hostname(url: string | null | undefined): string {
   if (!url) {
     return "";

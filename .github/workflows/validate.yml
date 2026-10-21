@@ -27,11 +27,6 @@ jobs:
       - uses: hacs/action@main
         with:
           category: integration
-          # `brands`: dropped once the home-assistant/brands PR lands. No new
-          # repository can pass this one -- the check reads an upstream
-          # repository this project has no entry in yet.
-          # `images`: dropped once a real screenshot is added to README.
-          ignore: brands images
 
   frontend:
     runs-on: ubuntu-latest
@@ -58,5 +53,5 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
-      - run: pip install feedparser==6.0.12 nh3==0.3.6 readability-lxml==0.8.4.1 pytest
+      - run: pip install feedparser==6.0.12 nh3==0.3.6 readability-lxml==0.8.4.1 aiohttp pytest
       - run: python -m pytest tests/ -q

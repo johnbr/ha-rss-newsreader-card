@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import html as html_mod
 import re
+from typing import Any
+from urllib.parse import urljoin, urlsplit
 
 import nh3
 
@@ -41,6 +43,30 @@ def sanitize_html(raw: str | None) -> str:
             "a": {"target": "_blank"},
         },
     )
+
+
+def http_url(value: Any, base: str | None = None) -> str | None:
+    """Return an absolute http(s) URL, or None.
+
+    Every URL the card turns into a link or an image comes from the feed, and
+    so from whoever publishes it. The card binds ``link`` straight into
+    ``<a href>``, and a ``javascript:`` URL there runs in Home Assistant's own
+    origin, with the viewer's session, when it is clicked. nh3 already holds
+    the HTML fragments to http(s); this does the same for the bare URL fields,
+    which never pass through nh3.
+
+    ``base`` resolves a relative link against the feed, so a feed that writes
+    ``/2026/10/story`` keeps its links.
+    """
+    if not isinstance(value, str) or not value.strip():
+        return None
+    url = value.strip()
+    if base:
+        url = urljoin(base, url)
+    parts = urlsplit(url)
+    if parts.scheme in ("http", "https") and parts.netloc:
+        return url
+    return None
 
 
 def strip_html(raw: str | None) -> str:

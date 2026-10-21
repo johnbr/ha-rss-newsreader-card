@@ -3,18 +3,22 @@
 from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.const import EVENT_HOMEASSISTANT_CLOSE
+from homeassistant.core import Event, HomeAssistant
 from homeassistant.loader import async_get_integration
+from homeassistant.util.ssl import client_context
 
 from .article import ArticleExtractor
 from .const import (
     DATA_ARTICLE_EXTRACTOR,
     DATA_FEED_MANAGER,
+    DATA_SESSION,
     DATA_WS_REGISTERED,
     DOMAIN,
 )
 from .feed_manager import FeedManager
 from .frontend import async_register_frontend, async_unregister_frontend
+from .netguard import create_guarded_session
 from .websocket import async_register_websocket_commands
 
 
@@ -23,9 +27,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     version = str(integration.version)
 
     data = hass.data.setdefault(DOMAIN, {})
-    manager = FeedManager(hass, version)
+    # Every fetch goes through this session, which refuses non-public
+    # addresses -- see netguard. Closed on unload, and on shutdown, which does
+    # not unload entries.
+    session = create_guarded_session(client_context())
+    data[DATA_SESSION] = session
+
+    async def _close_session(_: Event) -> None:
+        await session.close()
+
+    entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_CLOSE, _close_session))
+
+    manager = FeedManager(hass, session, version)
     data[DATA_FEED_MANAGER] = manager
-    data[DATA_ARTICLE_EXTRACTOR] = ArticleExtractor(hass, manager.user_agent)
+    data[DATA_ARTICLE_EXTRACTOR] = ArticleExtractor(hass, session, manager.user_agent)
 
     if not data.get(DATA_WS_REGISTERED):
         async_register_websocket_commands(hass)
@@ -39,6 +54,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     data = hass.data.get(DOMAIN, {})
     data.pop(DATA_FEED_MANAGER, None)
     data.pop(DATA_ARTICLE_EXTRACTOR, None)
+    if (session := data.pop(DATA_SESSION, None)) is not None:
+        await session.close()
     return True
 
 
