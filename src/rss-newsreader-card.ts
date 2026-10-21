@@ -4,7 +4,7 @@ import { property, state } from "lit/decorators.js";
 import "./components/headline-item";
 import "./components/article-view";
 import "./editor";
-import { hostname } from "./format";
+import { feedLabel, hostname } from "./format";
 import { sharedStyles } from "./styles";
 import {
   defineOnce,
@@ -45,6 +45,9 @@ export class RssNewsreaderCard extends LitElement {
 
   @state() private _now = Date.now();
 
+  /** URL of the one feed the list is narrowed to; null shows every feed. */
+  @state() private _feedFilter: string | null = null;
+
   private _pollTimer?: ReturnType<typeof setInterval>;
 
   private _tickTimer?: ReturnType<typeof setInterval>;
@@ -82,6 +85,9 @@ export class RssNewsreaderCard extends LitElement {
       }
     }
     this._config = config;
+    if (this._feedFilter && !this._validFeedUrls().includes(this._feedFilter)) {
+      this._feedFilter = null;
+    }
     this._fetchedOnce = false;
     this._view = "list";
     this._startTimers();
@@ -126,10 +132,15 @@ export class RssNewsreaderCard extends LitElement {
     const containerStyle = height
       ? `height: ${height}px;`
       : `max-height: ${DEFAULT_LIST_MAX_HEIGHT}px;`;
+    const title = this._config.title;
+    const filter = this._renderFeedFilter();
     return html`
       <ha-card>
-        ${this._config.title
-          ? html`<h1 class="card-header">${this._config.title}</h1>`
+        ${title || filter
+          ? html`<div class="header">
+              ${title ? html`<h1 class="card-header">${title}</h1>` : nothing}
+              ${filter}
+            </div>`
           : nothing}
         <div class="container" style=${containerStyle}>
           ${this._view === "article" && this._active
@@ -138,6 +149,61 @@ export class RssNewsreaderCard extends LitElement {
         </div>
       </ha-card>
     `;
+  }
+
+  /** The feed picker: only in the list view, and only with 2+ feeds. */
+  private _renderFeedFilter() {
+    if (this._config?.show_feed_filter === false || this._view !== "list") {
+      return nothing;
+    }
+    const feeds = this._filterOptions();
+    if (feeds.length < 2) {
+      return nothing;
+    }
+    const selected = this._feedFilter ?? "";
+    return html`
+      <div class="feed-filter">
+        <select
+          aria-label="Show articles from"
+          .value=${selected}
+          @change=${this._onFeedFilterChanged}
+        >
+          <option value="" ?selected=${selected === ""}>All feeds</option>
+          ${feeds.map(
+            (feed) => html`<option
+              value=${feed.url}
+              ?selected=${selected === feed.url}
+            >
+              ${feed.label}
+            </option>`
+          )}
+        </select>
+        <ha-icon icon="mdi:menu-down"></ha-icon>
+      </div>
+    `;
+  }
+
+  private _filterOptions(): { url: string; label: string }[] {
+    const seen = new Set<string>();
+    const options: { url: string; label: string }[] = [];
+    for (const feedConfig of this._config?.feeds ?? []) {
+      if (!/^https?:\/\//.test(feedConfig.url) || seen.has(feedConfig.url)) {
+        continue;
+      }
+      seen.add(feedConfig.url);
+      const feed = this._feeds.find((f) => f.url === feedConfig.url);
+      options.push({ url: feedConfig.url, label: feedLabel(feedConfig, feed) });
+    }
+    return options;
+  }
+
+  private _onFeedFilterChanged(ev: Event): void {
+    this._feedFilter = (ev.target as HTMLSelectElement).value || null;
+    this._listScrollTop = 0;
+    const list = this.renderRoot.querySelector(".list");
+    if (list) {
+      list.scrollTop = 0;
+    }
   }
 
   private _renderList() {
@@ -156,11 +222,22 @@ export class RssNewsreaderCard extends LitElement {
       </div>`;
     }
 
-    const failed = this._feeds.filter((f) => f.status === "error");
+    const filter = this._feedFilter;
+    const failed = this._feeds.filter(
+      (f) => f.status === "error" && (!filter || f.url === filter)
+    );
     const entries = this._mergedEntries();
 
     if (this._fetchError && !entries.length) {
       return this._renderEmpty("mdi:alert-circle-outline", this._fetchError);
+    }
+    if (filter && failed.length && !entries.length) {
+      return this._renderEmpty(
+        "mdi:rss-off",
+        `${this._filterLabel(filter)} failed: ${
+          failed[0].error?.message ?? hostname(filter)
+        }`
+      );
     }
     if (failed.length && !entries.length) {
       return this._renderEmpty(
@@ -173,9 +250,11 @@ export class RssNewsreaderCard extends LitElement {
     if (!entries.length) {
       return this._renderEmpty(
         "mdi:rss",
-        this._validFeedUrls().length
-          ? "No articles in these feeds yet."
-          : "Add a feed URL to get started."
+        filter
+          ? "No articles in this feed yet."
+          : this._validFeedUrls().length
+            ? "No articles in these feeds yet."
+            : "Add a feed URL to get started."
       );
     }
 
@@ -201,6 +280,13 @@ export class RssNewsreaderCard extends LitElement {
         )}
       </div>
     `;
+  }
+
+  private _filterLabel(url: string): string {
+    return (
+      this._filterOptions().find((option) => option.url === url)?.label ??
+      hostname(url)
+    );
   }
 
   private _renderArticle() {
@@ -234,7 +320,10 @@ export class RssNewsreaderCard extends LitElement {
     const feedOrder = new Map(this._config.feeds.map((f, i) => [f.url, i]));
     const items: DisplayEntry[] = [];
     for (const feed of this._feeds) {
-      if (feed.status !== "ok") {
+      if (
+        feed.status !== "ok" ||
+        (this._feedFilter && feed.url !== this._feedFilter)
+      ) {
         continue;
       }
       const feedConfig =
@@ -397,13 +486,74 @@ export class RssNewsreaderCard extends LitElement {
         overflow: hidden;
       }
 
-      .card-header {
+      .header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
         padding: 12px 16px 4px;
+      }
+
+      /* A title too long to share the row pushes the picker onto its own */
+      .card-header {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 0;
         margin: 0;
         font-size: var(--ha-card-header-font-size, 24px);
         font-weight: 400;
         line-height: 1.2;
         color: var(--ha-card-header-color, var(--primary-text-color));
+      }
+
+      .feed-filter {
+        position: relative;
+        flex-shrink: 1;
+        min-width: 0;
+        max-width: 60%;
+        margin-left: auto;
+      }
+
+      .feed-filter select {
+        appearance: none;
+        -webkit-appearance: none;
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 120px;
+        padding: 6px 30px 6px 12px;
+        border: 1px solid var(--divider-color);
+        border-radius: 8px;
+        background: var(--card-background-color, var(--ha-card-background));
+        color: var(--primary-text-color);
+        font: inherit;
+        font-size: 14px;
+        line-height: 1.3;
+        text-overflow: ellipsis;
+        cursor: pointer;
+      }
+
+      .feed-filter select:hover {
+        border-color: var(--secondary-text-color);
+      }
+
+      .feed-filter select:focus-visible {
+        outline: 2px solid var(--primary-color);
+        outline-offset: 1px;
+      }
+
+      .feed-filter option {
+        background: var(--card-background-color, var(--ha-card-background));
+        color: var(--primary-text-color);
+      }
+
+      .feed-filter ha-icon {
+        position: absolute;
+        right: 6px;
+        top: 50%;
+        transform: translateY(-50%);
+        --mdc-icon-size: 20px;
+        color: var(--secondary-text-color);
+        pointer-events: none;
       }
 
       .container {

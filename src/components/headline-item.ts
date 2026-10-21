@@ -1,7 +1,7 @@
 import { LitElement, html, css, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 
-import { relativeTime, hostname } from "../format";
+import { feedLabel, relativeTime } from "../format";
 import { sharedStyles } from "../styles";
 import { defineOnce, type DisplayEntry } from "../types";
 
@@ -18,7 +18,7 @@ export class RssNewsreaderHeadline extends LitElement {
 
   protected render() {
     const { entry, feed, feedConfig } = this.item;
-    const source = feedConfig.name || feed.feed_title || hostname(feed.url);
+    const source = feedLabel(feedConfig, feed);
     const time = relativeTime(entry.published, this.language, this.now);
     const accent = feedConfig.color;
     return html`

@@ -14,6 +14,7 @@ export interface RssNewsreaderCardConfig {
   show_images?: boolean;
   open_links?: "new_tab" | "same_tab";
   height?: number;
+  show_feed_filter?: boolean;
 }
 
 export interface FeedEntry {
