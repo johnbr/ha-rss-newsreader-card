@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/johnbr/ha-rss-newsreader-card/compare/v0.1.2...v0.2.0) (2026-10-21)
+
+
+### Features
+
+* feed picker to show one feed's articles ([#12](https://github.com/johnbr/ha-rss-newsreader-card/issues/12)) ([ef7c236](https://github.com/johnbr/ha-rss-newsreader-card/commit/ef7c236b830853610e13cb93f0c991cccc01fd05))
+
 ## [0.1.2](https://github.com/johnbr/ha-rss-newsreader-card/compare/v0.1.1...v0.1.2) (2026-10-21)
 
 
