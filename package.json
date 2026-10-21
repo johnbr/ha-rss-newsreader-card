@@ -1,6 +1,6 @@
 {
   "name": "ha-rss-newsreader-card",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "RSS news reader card for Home Assistant with server-side feed fetching",
   "license": "MIT",
   "repository": {
