@@ -1,3 +1,5 @@
+import type { FeedConfig, FeedResult } from "./types";
+
 const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["year", 365 * 24 * 3600],
   ["month", 30 * 24 * 3600],
@@ -71,6 +73,11 @@ export function safeHttpUrl(url: string | null | undefined): string | null {
   } catch {
     return null;
   }
+}
+
+/** How a feed is named in the list and the feed picker. */
+export function feedLabel(feedConfig: FeedConfig, feed?: FeedResult): string {
+  return feedConfig.name || feed?.feed_title || hostname(feedConfig.url);
 }
 
 export function hostname(url: string | null | undefined): string {

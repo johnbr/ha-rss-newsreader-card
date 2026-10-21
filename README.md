@@ -12,6 +12,8 @@ linked page, reader-view style.
 ## Features
 
 - Multiple RSS/Atom feeds per card, merged and sorted by date
+- A feed picker in the header narrows the list to one feed (**All feeds** by
+  default)
 - Click a headline → the article expands in place (back button returns to the
   list, scroll position preserved)
 - Inline article images + list thumbnails (`media:*`, enclosures, content
@@ -77,6 +79,7 @@ refresh_interval: 900        # seconds between refreshes (min 300)
 max_items: 30                # merged headline cap
 show_images: true            # thumbnails + article images
 open_links: new_tab          # new_tab | same_tab
+show_feed_filter: true       # feed picker in the header (2+ feeds)
 height: 420                  # px; omit to let the layout decide
 ```
 
@@ -88,6 +91,7 @@ height: 420                  # px; omit to let the layout decide
 | `max_items` | `30` | Maximum merged headlines shown. |
 | `show_images` | `true` | Show list thumbnails and article images. |
 | `open_links` | `new_tab` | Where external article links open. |
+| `show_feed_filter` | `true` | Show the feed picker when the card has two or more feeds. Picking a feed shows only its articles (up to `max_items`); **All feeds** is the default and returns to the merged list. The choice lasts until the page is reloaded. |
 | `height` | — | Fixed card content height in px (list becomes scrollable). |
 
 ### Where the article text comes from

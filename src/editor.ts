@@ -15,6 +15,7 @@ const LABELS: Record<string, string> = {
   height: "Card height",
   show_images: "Show images",
   open_links: "Open links in",
+  show_feed_filter: "Show feed picker",
   url: "Feed URL",
   name: "Display name",
   color: "Accent color",
@@ -56,6 +57,7 @@ const OPTIONS_SCHEMA = [
         },
       },
       { name: "show_images", selector: { boolean: {} } },
+      { name: "show_feed_filter", selector: { boolean: {} } },
       {
         name: "open_links",
         selector: {
